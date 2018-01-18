@@ -418,7 +418,7 @@ view lift model properties items =
                   }
               """
             ]
-            [ Icon.view "more_vert"
+            [ Icon.view config.icon
                 [ cs "material-icons"
                 , css "pointer-events" "none"
                 ]
