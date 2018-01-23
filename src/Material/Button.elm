@@ -264,8 +264,6 @@ view lift model options html =
             , listeners
             , Internal.attribute (Html.Attributes.href (Maybe.withDefault "" config.link) )
                 |> when ((config.link /= Nothing) && not config.disabled)
-            , Internal.attribute (Html.Attributes.disabled True)
-                |> when config.disabled
             , cs "mdl-button--disabled"
                 |> when config.disabled
             ]
