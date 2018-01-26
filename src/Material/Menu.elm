@@ -394,7 +394,6 @@ view lift model properties items =
             styled_ Html.button
             [ cs "mdl-button"
             , cs "mdl-js-button"
-            , cs "mdl-button--icon"
             , Options.on "click"
                 ( Json.map
                      (if model.dropdown.open then always Close else Open)
