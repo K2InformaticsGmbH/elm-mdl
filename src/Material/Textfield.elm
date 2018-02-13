@@ -8,6 +8,7 @@ module Material.Textfield
         , defaultValue
         , disabled
         , password
+        , passwordPreview
         , render
         , react
         , text_
@@ -29,7 +30,6 @@ module Material.Textfield
         , defaultConfig
         )
 
-
 {-| From the [Material Design Lite documentation](http://www.getmdl.io/components/#textfields-section):
 
 > The Material Design Lite (MDL) text field component is an enhanced version of
@@ -42,7 +42,7 @@ module Material.Textfield
 > Text fields are a common feature of most user interfaces, regardless of a
 > site's content or function. Their design and use is therefore an important
 > factor in the overall user experience. See the text field component's
-> [Material  Design specifications page](https://www.google.com/design/spec/components/text-fields.html)
+> [Material Design specifications page](https://www.google.com/design/spec/components/text-fields.html)
 > for details.
 >
 > The enhanced text field component has a more vivid visual look than a standard
@@ -50,32 +50,42 @@ module Material.Textfield
 > main types of text fields in the text field component, each with its own basic
 > coding requirements. The types are single-line, multi-line, and expandable.
 
-
 Refer to
 [this site](https://debois.github.io/elm-mdl/#textfields)
 for a live demo.
 
+
 # Component render
+
 @docs render
 
+
 # Options
+
 @docs Property, Config, defaultConfig, value, defaultValue
+
 
 ## Appearance
 
 @docs label, floatingLabel, error
 
+
 ## Html attributes
+
 @docs disabled, rows, cols
 @docs autofocus, maxlength, maxRows
 
-@docs password, email, textarea, text_
+@docs password, passwordPreview, email, textarea, text_
 @docs expandable, expandableIcon
 
+
 # Elm Architecture
+
 @docs Msg, Model, defaultModel, update, view
 
+
 # Internal use
+
 @docs react
 
 -}
@@ -85,9 +95,9 @@ import Html.Events exposing (targetValue, keyCode, defaultOptions)
 import Html exposing (div, span, Html, text)
 import Json.Decode as Decoder
 import Material.Internal.Textfield exposing (Msg(..))
-import Material.Msg exposing (Index) 
+import Material.Msg exposing (Index)
 import Material.Component as Component exposing (Indexed)
-import Material.Options as Options exposing (cs, css, nop, Style, when)
+import Material.Options as Options exposing (cs, css, nop, Style, when, styled_)
 import Material.Internal.Options as Internal
 import Material.Icon as Icon
 import Material.Internal.Options as Internal
@@ -103,6 +113,7 @@ type Kind
     = Text
     | Textarea
     | Password
+    | PasswordPreview
     | Email
 
 
@@ -171,6 +182,7 @@ of the element as parameter as this is currently required.
 **NOTE:** When manually setting the **id** of the `input` element using
 `Options.inner` then the `expandable` **id** must match
 the `input` **id**.
+
 -}
 expandable : String -> Property m
 expandable id =
@@ -181,10 +193,11 @@ expandable id =
 {-| Sets the icon *only* when the expandable has been set to a valid ID.
 
 Defaults to `search`
+
 -}
 expandableIcon : String -> Property m
 expandableIcon id =
-  Internal.option
+    Internal.option
         (\config -> { config | expandableIcon = id })
 
 
@@ -245,8 +258,8 @@ input =
 -}
 email : Property m
 email =
-  Internal.option
-    (\config -> { config | kind = Email })
+    Internal.option
+        (\config -> { config | kind = Email })
 
 
 {-| Sets the type of input to 'password'.
@@ -255,6 +268,14 @@ password : Property m
 password =
     Internal.option
         (\config -> { config | kind = Password })
+
+
+{-| Sets the type of input to 'passwordPreview'.
+-}
+passwordPreview : Property m
+passwordPreview =
+    Internal.option
+        (\config -> { config | kind = PasswordPreview })
 
 
 {-| Creates a multiline textarea using 'textarea' element
@@ -294,23 +315,25 @@ maxRows k =
     Internal.option (\config -> { config | maxRows = Just k })
 
 
+
 -- MODEL
 
 
-{-|
--}
+{-| -}
 type alias Model =
     { isFocused : Bool
     , isDirty : Bool
+    , isPreview : Bool
     }
 
 
-{-| Default model. 
+{-| Default model.
 -}
 defaultModel : Model
 defaultModel =
     { isFocused = False
     , isDirty = False
+    , isPreview = False
     }
 
 
@@ -318,10 +341,10 @@ defaultModel =
 -- ACTIONS, UPDATE
 
 
-{-| Component actions. 
+{-| Component actions.
 -}
-type alias Msg
-    = Material.Internal.Textfield.Msg
+type alias Msg =
+    Material.Internal.Textfield.Msg
 
 
 {-| Component update.
@@ -345,10 +368,13 @@ update _ msg model =
         Focus ->
             Just { model | isFocused = True }
 
+        TogglePreview ->
+            Just { model | isPreview = not model.isPreview }
+
         NoOp ->
             Just model
     )
-      |> flip (!) []
+        |> flip (!) []
 
 
 
@@ -361,6 +387,7 @@ Be aware that styling (third argument) is applied to the outermost element
 of the textfield's implementation, and so is mostly useful for positioning
 (e.g., `margin: 0 auto;` or `align-self: flex-end`). See `Options.input`
 if you need to apply styling to the underlying `<input>` element.
+
 -}
 view : (Msg -> m) -> Model -> List (Property m) -> x -> Html m
 view lift model options _ =
@@ -388,23 +415,24 @@ view lift model options _ =
         preventEnterWhenMaxRowsExceeded =
             Options.onWithOptions "keydown"
                 { defaultOptions
-                  | preventDefault = True
+                    | preventDefault = True
                 }
-                ( Decoder.map2 (,) keyCode targetValue
-                  |> Decoder.andThen (\ (keyCode, value) ->
-                      let
-                          rows =
-                              value
-                              |> String.split "\n"
-                              |> List.length
-                      in
-                      if (rows >= Maybe.withDefault 0 config.maxRows) && (keyCode == 13) then
-                            Decoder.succeed (lift NoOp)
-                          else
-                            Decoder.fail ""
-                    )
+                (Decoder.map2 (,) keyCode targetValue
+                    |> Decoder.andThen
+                        (\( keyCode, value ) ->
+                            let
+                                rows =
+                                    value
+                                        |> String.split "\n"
+                                        |> List.length
+                            in
+                                if (rows >= Maybe.withDefault 0 config.maxRows) && (keyCode == 13) then
+                                    Decoder.succeed (lift NoOp)
+                                else
+                                    Decoder.fail ""
+                        )
                 )
-            |> when ((config.kind == Textarea) && (config.maxRows /= Nothing))
+                |> when ((config.kind == Textarea) && (config.maxRows /= Nothing))
 
         expHolder =
             case config.expandable of
@@ -425,6 +453,20 @@ view lift model options _ =
                             x
                         ]
                     )
+
+        previewButton =
+            styled_ Html.button
+                [ cs "mdl-button"
+                , cs "mdl-js-button"
+                , cs "mdl-button--icon"
+                , Options.on "click" (Decoder.succeed (lift TogglePreview))
+                ]
+                []
+                [ Icon.view "remove_red_eye"
+                    [ cs "material-icons"
+                    , css "pointer-events" "none"
+                    ]
+                ]
     in
         Internal.applyContainer summary
             div
@@ -436,60 +478,82 @@ view lift model options _ =
             , cs "mdl-textfield--floating-label" |> when config.labelFloat
             , cs "is-invalid" |> when (config.error /= Nothing)
             , cs "is-dirty"
-                |> when (case config.value of
-                           Just "" -> False
-                           Just _ -> True
-                           Nothing -> model.isDirty)
+                |> when
+                    (case config.value of
+                        Just "" ->
+                            False
+
+                        Just _ ->
+                            True
+
+                        Nothing ->
+                            model.isDirty
+                    )
             , cs "is-focused" |> when (model.isFocused && not config.disabled)
             , cs "is-disabled" |> when config.disabled
             , cs "mdl-textfield--expandable" |> when (config.expandable /= Nothing)
             , preventEnterWhenMaxRowsExceeded
-            ] <| expHolder
-            [ Internal.applyInput summary
-                (if config.kind == Textarea then Html.textarea else Html.input)
-                [ cs "mdl-textfield__input"
-                , css "outline" "none"
-                , Internal.on1 "focus" lift Focus
-                , Internal.on1 "blur" lift Blur
-                , case config.kind of
-                    Text ->
-                        Internal.attribute <| type_ "text"
-
-                    Password ->
-                        Internal.attribute <| type_ "password"
-
-                    Email -> 
-                        Internal.attribute <| type_ "email" 
-                    _ ->
-                        nop
-                , Internal.attribute (Html.Attributes.disabled True) 
-                    |> when config.disabled
-                , expandableId
-                , Options.onInput (Input >> lift)
-                , Internal.attribute
-                    (Html.Attributes.value (Maybe.withDefault "" config.value))
-                  |> when (config.value /= Nothing)
-                , case config.defaultValue of
-                    Nothing ->
-                        Options.nop
-
-                    Just v ->
-                        Internal.attribute <| Html.Attributes.defaultValue v
-                ]
-                []
-            , Html.label
-                ([ class "mdl-textfield__label" ] ++ labelFor)
-                (case config.labelText of
-                    Just str ->
-                        [ text str ]
-
-                    Nothing ->
-                        []
-                )
-            , config.error
-                |> Maybe.map (\e -> span [ class "mdl-textfield__error" ] [ text e ])
-                |> Maybe.withDefault (div [] [])
             ]
+        <|
+            expHolder
+                [ Internal.applyInput summary
+                    (if config.kind == Textarea then
+                        Html.textarea
+                     else
+                        Html.input
+                    )
+                    [ cs "mdl-textfield__input"
+                    , css "outline" "none"
+                    , Internal.on1 "focus" lift Focus
+                    , Internal.on1 "blur" lift Blur
+                    , case config.kind of
+                        Text ->
+                            Internal.attribute <| type_ "text"
+
+                        Password ->
+                            if model.isPreview then
+                                Internal.attribute <| type_ "text"
+                            else
+                                Internal.attribute <| type_ "password"
+
+                        PasswordPreview ->
+                            Internal.attribute <| type_ "password"
+
+                        Email ->
+                            Internal.attribute <| type_ "email"
+
+                        _ ->
+                            nop
+                    , Internal.attribute (Html.Attributes.disabled True)
+                        |> when config.disabled
+                    , expandableId
+                    , Options.onInput (Input >> lift)
+                    , Internal.attribute
+                        (Html.Attributes.value (Maybe.withDefault "" config.value))
+                        |> when (config.value /= Nothing)
+                    , case config.defaultValue of
+                        Nothing ->
+                            Options.nop
+
+                        Just v ->
+                            Internal.attribute <| Html.Attributes.defaultValue v
+                    ]
+                    []
+                , previewButton
+                , Html.label
+                    ([ class "mdl-textfield__label" ] ++ labelFor)
+                    (case config.labelText of
+                        Just str ->
+                            [ text str ]
+
+                        Nothing ->
+                            []
+                    )
+                , config.error
+                    |> Maybe.map (\e -> span [ class "mdl-textfield__error" ] [ text e ])
+                    |> Maybe.withDefault (div [] [])
+                ]
+
 
 
 -- COMPONENT
@@ -505,8 +569,8 @@ type alias Store s =
 
 {-| Component react function.
 -}
-react
-    : (Material.Msg.Msg m -> msg)
+react :
+    (Material.Msg.Msg m -> msg)
     -> Msg
     -> Index
     -> Store s
@@ -514,11 +578,12 @@ react
 react =
     Component.react get
         set
-        Material.Msg.TextfieldMsg update
+        Material.Msg.TextfieldMsg
+        update
 
 
 {-| Component render. Below is an example, assuming boilerplate setup as indicated
-  in `Material`, and a user message `ChangeAgeMsg Int`.
+in `Material`, and a user message `ChangeAgeMsg Int`.
 
     Textfield.render Mdl [0] model.mdl
       [ Textfield.label "Age"
@@ -532,16 +597,24 @@ Be aware that styling (third argument) is applied to the outermost element
 of the textfield's implementation, and so is mostly useful for positioning
 (e.g., `margin: 0 auto;` or `align-self: flex-end`). See `Textfield.style`
 if you need to apply styling to the underlying `<input>` element.
+
 -}
-render
-    : (Material.Msg.Msg m -> m)
+render :
+    (Material.Msg.Msg m -> m)
     -> Index
     -> Store s
     -> List (Property m)
     -> x
-    -> Html m       
+    -> Html m
 render lift index store options =
-    Component.render get view Material.Msg.TextfieldMsg lift index store
+    Component.render get
+        view
+        Material.Msg.TextfieldMsg
+        lift
+        index
+        store
         (Internal.dispatch lift :: options)
+
+
 
 -- TODO: use inject ^^^^^

@@ -6,3 +6,4 @@ type Msg
     | Focus
     | Input String
     | NoOp
+    | TogglePreview
