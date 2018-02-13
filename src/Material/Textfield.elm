@@ -465,7 +465,7 @@ view lift model options _ =
                         , Options.on "click" (Decoder.succeed (lift TogglePreview))
                         ]
                         []
-                        [ Icon.view "remove_red_eye"
+                        [ Icon.view (if model.isPreview then "lock_open" else "lock_outline")
                             [ cs "material-icons"
                             , css "pointer-events" "none"
                             ]
