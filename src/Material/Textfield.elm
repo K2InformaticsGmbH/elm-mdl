@@ -455,18 +455,21 @@ view lift model options _ =
                     )
 
         previewButton =
-            styled_ Html.button
-                [ cs "mdl-button"
-                , cs "mdl-js-button"
-                , cs "mdl-button--icon"
-                , Options.on "click" (Decoder.succeed (lift TogglePreview))
-                ]
-                []
-                [ Icon.view "remove_red_eye"
-                    [ cs "material-icons"
-                    , css "pointer-events" "none"
-                    ]
-                ]
+            case config.kind of
+                PasswordPreview ->
+                    styled_ Html.button
+                        [ cs "mdl-button"
+                        , cs "mdl-js-button"
+                        , cs "mdl-button--icon"
+                        , Options.on "click" (Decoder.succeed (lift TogglePreview))
+                        ]
+                        []
+                        [ Icon.view "remove_red_eye"
+                            [ cs "material-icons"
+                            , css "pointer-events" "none"
+                            ]
+                        ]
+                _ -> text ""
     in
         Internal.applyContainer summary
             div
