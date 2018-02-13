@@ -461,6 +461,7 @@ view lift model options _ =
                         [ cs "mdl-button"
                         , cs "mdl-js-button"
                         , cs "mdl-button--icon"
+                        , css "left" "270px"
                         , Options.on "click" (Decoder.succeed (lift TogglePreview))
                         ]
                         []
@@ -514,13 +515,13 @@ view lift model options _ =
                             Internal.attribute <| type_ "text"
 
                         Password ->
+                            Internal.attribute <| type_ "password"
+
+                        PasswordPreview ->
                             if model.isPreview then
                                 Internal.attribute <| type_ "text"
                             else
                                 Internal.attribute <| type_ "password"
-
-                        PasswordPreview ->
-                            Internal.attribute <| type_ "password"
 
                         Email ->
                             Internal.attribute <| type_ "email"
