@@ -100,6 +100,7 @@ import Material.Component as Component exposing (Indexed)
 import Material.Options as Options exposing (cs, css, nop, Style, when, styled_)
 import Material.Internal.Options as Internal
 import Material.Icon as Icon
+import Material.Helpers as Helpers
 import Material.Internal.Options as Internal
 import Material.Internal.Textfield exposing (Msg(..))
 import Material.Msg
@@ -464,13 +465,23 @@ view lift model options _ =
                         , css "left" "270px"
                         , Options.on "click" (Decoder.succeed (lift TogglePreview))
                         ]
-                        []
-                        [ Icon.view (if model.isPreview then "lock_open" else "lock_outline")
+                        [ Helpers.blurOn "mouseup"
+                        , Helpers.blurOn "mouseleave"
+                        , Helpers.blurOn "touchend"
+                        ]
+                        [ Icon.view
+                            (if model.isPreview then
+                                "lock_open"
+                             else
+                                "lock_outline"
+                            )
                             [ cs "material-icons"
                             , css "pointer-events" "none"
                             ]
                         ]
-                _ -> text ""
+
+                _ ->
+                    text ""
     in
         Internal.applyContainer summary
             div
